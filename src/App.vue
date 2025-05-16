@@ -28,15 +28,15 @@ async function fetchTickets() {
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error('Error fetching tickets:', error);
+      console.error('Fetch error:', error.message);
       errorMsg.value = `Failed to load tickets: ${error.message}`;
       tickets.value = [];
     } else {
       tickets.value = data || [];
     }
   } catch (err) {
-    console.error('Supabase call failed during fetch:', err);
-    errorMsg.value = `An unexpected error occurred: ${err.message}`;
+    console.error('Fetch exception:', err.message);
+    errorMsg.value = `An unexpected error occurred during fetch.`;
     tickets.value = [];
   } finally {
     loading.value = false;
@@ -57,15 +57,11 @@ const filteredTickets = computed(() => {
 
 // Handle ticket updates (e.g., title, description change from Board component)
 async function updateTicket(updatedTicketData) {
-  // Assuming updatedTicketData contains at least the id and fields to be updated
   const { id, ...fieldsToUpdate } = updatedTicketData;
-
   if (!id) {
-    console.error("Update failed: Ticket ID is missing.");
     errorMsg.value = "Update failed: Ticket ID is missing.";
     return;
   }
-
   loading.value = true;
   errorMsg.value = '';
   try {
@@ -74,27 +70,20 @@ async function updateTicket(updatedTicketData) {
       .update({ ...fieldsToUpdate, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select();
-
     if (error) {
-      console.error('Error updating ticket:', error);
+      console.error('Update error:', error.message);
       errorMsg.value = `Failed to update ticket: ${error.message}`;
-      // Optionally, re-fetch to revert optimistic update or ensure consistency
-      // await fetchTickets(); 
+      await fetchTickets(); // Re-fetch to ensure UI consistency on error
     } else if (data && data.length > 0) {
       const index = tickets.value.findIndex(t => t.id === id);
-      if (index !== -1) {
-        tickets.value[index] = { ...tickets.value[index], ...data[0] };
-      } else {
-        // If not found, might be a new ticket or an issue, re-fetch for safety
-        await fetchTickets();
-      }
+      if (index !== -1) tickets.value[index] = { ...tickets.value[index], ...data[0] };
+      else await fetchTickets();
     } else {
-       // If no data is returned but no error, it's unusual. Re-fetch.
-       await fetchTickets();
+      await fetchTickets();
     }
   } catch (err) {
-    console.error('Supabase call failed during update:', err);
-    errorMsg.value = `An unexpected error occurred: ${err.message}`;
+    console.error('Update exception:', err.message);
+    errorMsg.value = `An unexpected error occurred during update.`;
   } finally {
     loading.value = false;
   }
@@ -103,11 +92,9 @@ async function updateTicket(updatedTicketData) {
 // Handle ticket status changes (e.g., from drag and drop in Board component)
 async function updateTicketStatus(ticketId, newStatus) {
   if (!ticketId) {
-    console.error("Status update failed: Ticket ID is missing.");
     errorMsg.value = "Status update failed: Ticket ID is missing.";
     return;
   }
-
   loading.value = true;
   errorMsg.value = '';
   try {
@@ -116,25 +103,20 @@ async function updateTicketStatus(ticketId, newStatus) {
       .update({ status: newStatus, updated_at: new Date().toISOString() })
       .eq('id', ticketId)
       .select();
-
     if (error) {
-      console.error('Error updating ticket status:', error);
+      console.error('Status update error:', error.message);
       errorMsg.value = `Failed to update status: ${error.message}`;
-      // Optionally, re-fetch
-      // await fetchTickets();
+      await fetchTickets(); // Re-fetch for consistency
     } else if (data && data.length > 0) {
       const index = tickets.value.findIndex(t => t.id === ticketId);
-      if (index !== -1) {
-         tickets.value[index] = { ...tickets.value[index], ...data[0] };
-      } else {
-        await fetchTickets();
-      }
+      if (index !== -1) tickets.value[index] = { ...tickets.value[index], ...data[0] };
+      else await fetchTickets();
     } else {
       await fetchTickets();
     }
   } catch (err) {
-    console.error('Supabase call failed during status update:', err);
-    errorMsg.value = `An unexpected error occurred: ${err.message}`;
+    console.error('Status update exception:', err.message);
+    errorMsg.value = `An unexpected error occurred during status update.`;
   } finally {
     loading.value = false;
   }
@@ -145,33 +127,27 @@ async function updateTicketStatus(ticketId, newStatus) {
 // and pass the necessary ticket data.
 // import { v4 as uuidv4 } from 'uuid'; // If you need to generate ID client-side for some reason
 async function handleAddTicket(newTicketDetails) {
-  // Example: newTicketDetails = { title: 'New Task', description: 'Details', category: 'supply-partners', status: 'todo' }
   loading.value = true;
   errorMsg.value = '';
   try {
     const ticketToInsert = {
-      // id: uuidv4(), // Supabase can auto-generate UUID if column default is set, or use client-generated like in seed
       ...newTicketDetails,
       is_subtask: newTicketDetails.is_subtask || false,
       parent_id: newTicketDetails.parent_id || null,
-      // created_at and updated_at will be handled by Supabase or triggers
     };
-
     const { data, error } = await supabase
       .from('tickets')
       .insert([ticketToInsert])
       .select();
-
     if (error) {
-      console.error('Error adding ticket:', error);
+      console.error('Add error:', error.message);
       errorMsg.value = `Failed to add ticket: ${error.message}`;
     } else if (data && data.length > 0) {
-      tickets.value.push(data[0]); // Add to local list
-      // Or await fetchTickets();
+      tickets.value.push(data[0]);
     }
   } catch (err) {
-    console.error('Supabase call failed during add:', err);
-    errorMsg.value = `An unexpected error occurred: ${err.message}`;
+    console.error('Add exception:', err.message);
+    errorMsg.value = `An unexpected error occurred during add.`;
   } finally {
     loading.value = false;
   }
@@ -181,7 +157,6 @@ async function handleAddTicket(newTicketDetails) {
 // You'll need to call this from your UI
 async function handleDeleteTicket(ticketId) {
   if (!ticketId) {
-    console.error("Delete failed: Ticket ID is missing.");
     errorMsg.value = "Delete failed: Ticket ID is missing.";
     return;
   }
@@ -191,21 +166,16 @@ async function handleDeleteTicket(ticketId) {
   loading.value = true;
   errorMsg.value = '';
   try {
-    const { error } = await supabase
-      .from('tickets')
-      .delete()
-      .eq('id', ticketId);
-
+    const { error } = await supabase.from('tickets').delete().eq('id', ticketId);
     if (error) {
-      console.error('Error deleting ticket:', error);
+      console.error('Delete error:', error.message);
       errorMsg.value = `Failed to delete ticket: ${error.message}`;
     } else {
-      tickets.value = tickets.value.filter(t => t.id !== ticketId); // Remove from local list
-      // Or await fetchTickets();
+      tickets.value = tickets.value.filter(t => t.id !== ticketId);
     }
   } catch (err) {
-    console.error('Supabase call failed during delete:', err);
-    errorMsg.value = `An unexpected error occurred: ${err.message}`;
+    console.error('Delete exception:', err.message);
+    errorMsg.value = `An unexpected error occurred during delete.`;
   } finally {
     loading.value = false;
   }
@@ -221,14 +191,18 @@ async function handleDeleteTicket(ticketId) {
         <p class="text-gray-600">
           Track development tasks for the Bold Exchange Portal
         </p>
-        <!-- Add Ticket Button Example (you'll need to style and position this appropriately) -->
-        <!-- <button @click="() => handleAddTicket({ title: 'Test Add ' + Date.now(), status: 'todo', category: 'terminology' })" class="bg-blue-500 text-white px-3 py-1 rounded">Add Test Ticket</button> -->
+        <!-- Example Add Ticket Button - you'll need to style and integrate this better -->
+        <!-- <button 
+          @click="() => handleAddTicket({ title: 'Test Add ' + Date.now(), status: 'todo', category: 'terminology', description: 'A test ticket' })" 
+          class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+          Add Test Ticket
+        </button> -->
         <div class="flex items-center space-x-2">
           <label for="category-filter" class="text-sm font-medium text-gray-700">Filter by:</label>
           <select 
             id="category-filter" 
             v-model="filterCategory"
-            class="border border-gray-300 rounded-md px-3 py-1 text-sm"
+            class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
           >
             <option v-for="category in categories" :key="category.id" :value="category.id">
               {{ category.label }}
@@ -240,21 +214,26 @@ async function handleDeleteTicket(ticketId) {
     
     <main>
       <div v-if="loading && !tickets.length" class="flex justify-center items-center h-64">
-        <p class="text-gray-500">Loading tickets...</p>
+        <p class="text-gray-500 text-lg">Loading tickets...</p>
       </div>
-      <div v-if="errorMsg" class="my-4 p-3 bg-red-100 text-red-700 border border-red-300 rounded">
+      <div v-if="errorMsg" class="my-4 p-4 bg-red-100 text-red-700 border border-red-400 rounded-md shadow-sm">
         <strong>Error:</strong> {{ errorMsg }}
       </div>
+      
       <Board 
-        v-if="!loading || tickets.length" 
+        v-if="(!loading && tickets.length) || (loading && tickets.length)" 
         :tickets="filteredTickets"
         @update-ticket="updateTicket" 
         @update-status="updateTicketStatus"
-        <!-- You might need to pass handleAddTicket and handleDeleteTicket as props or handle events -->
-        <!-- Example: @delete-ticket-event="handleDeleteTicket" -->
+        @add-ticket-event="handleAddTicket" 
+        @delete-ticket-event="handleDeleteTicket"
       />
-       <div v-if="!loading && !tickets.length && !errorMsg" class="text-center py-8">
-        <p class="text-gray-500">No tickets found. Try adding one!</p>
+      <!-- Note: The Board component will need to emit @add-ticket-event and @delete-ticket-event -->
+      <!-- These events should pass the necessary data (ticket details for add, ticketId for delete) -->
+
+       <div v-if="!loading && !tickets.length && !errorMsg" class="text-center py-10">
+        <p class="text-gray-500 text-lg">No tickets found. Try adding one!</p>
+        <!-- You could place an add button here as well -->
       </div>
     </main>
   </div>
