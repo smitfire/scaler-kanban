@@ -59,7 +59,8 @@ async function fetchTickets() {
     const { data, error } = await supabase
       .from('tickets')
       .select('*')
-      .order('created_at', { ascending: true });
+      .order('parent_id', { ascending: true, nullsFirst: true })
+      .order('title', { ascending: true });
 
     if (error) {
       console.error('Fetch error:', error.message);
