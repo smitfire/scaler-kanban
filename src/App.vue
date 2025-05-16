@@ -60,6 +60,8 @@ async function fetchTickets() {
     const { data, error } = await supabase
       .from('tickets')
       .select('*')
+      .order('category', { ascending: true })
+      .order('section', { ascending: true })
       .order('parent_id', { ascending: true, nullsFirst: true })
       .order('title', { ascending: true });
 
