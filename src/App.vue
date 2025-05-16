@@ -1,8 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-// import { v4 as uuidv4 } from 'uuid'; // We'll use Supabase-generated or pre-seeded IDs
 import Board from './components/Board.vue';
-// import { parseTickets } from './utils/ticketParser'; // Data will come from Supabase
+
 import { supabase } from './supabase'; // Import Supabase client
 
 const tickets = ref([]);
@@ -18,6 +17,41 @@ const categories = [
   { id: 'supply-packages', label: 'Supply Packages' }
 ];
 
+// Helper to convert Supabase snake_case to camelCase for UI
+function supabaseToCamelCase(ticket) {
+  if (!ticket) return null;
+  return {
+    ...ticket,
+    parentId: ticket.parent_id,
+    isSubtask: ticket.is_subtask, 
+  };
+}
+
+// Helper to convert UI camelCase to Supabase snake_case for DB operations
+function camelCaseToSupabase(ticketDetails) {
+  if (!ticketDetails) return null;
+  const forSupabase = { ...ticketDetails };
+
+  if (forSupabase.hasOwnProperty('parentId')) {
+    forSupabase.parent_id = forSupabase.parentId;
+    delete forSupabase.parentId;
+  }
+  if (forSupabase.hasOwnProperty('isSubtask')) {
+    forSupabase.is_subtask = forSupabase.isSubtask;
+    delete forSupabase.isSubtask;
+  }
+  // created_at and updated_at are generally handled by DB or set directly in ISOString format
+  if (forSupabase.createdAt && forSupabase.createdAt instanceof Date) {
+    forSupabase.created_at = forSupabase.createdAt.toISOString();
+    // delete forSupabase.createdAt; // Keep if your DB schema doesn't auto-set it on insert and you rely on this value
+  }
+  if (forSupabase.updatedAt && forSupabase.updatedAt instanceof Date) {
+    forSupabase.updated_at = forSupabase.updatedAt.toISOString();
+    // delete forSupabase.updatedAt; // Keep if your DB schema doesn't auto-set it on update and you rely on this value
+  }
+  return forSupabase;
+}
+
 async function fetchTickets() {
   loading.value = true;
   errorMsg.value = '';
@@ -32,7 +66,7 @@ async function fetchTickets() {
       errorMsg.value = `Failed to load tickets: ${error.message}`;
       tickets.value = [];
     } else {
-      tickets.value = data || [];
+      tickets.value = (data || []).map(supabaseToCamelCase);
     }
   } catch (err) {
     console.error('Fetch exception:', err.message);
@@ -57,26 +91,31 @@ const filteredTickets = computed(() => {
 
 // Handle ticket updates (e.g., title, description change from Board component)
 async function updateTicket(updatedTicketData) {
-  const { id, ...fieldsToUpdate } = updatedTicketData;
+  const { id, ...camelCaseFieldsToUpdate } = updatedTicketData;
   if (!id) {
     errorMsg.value = "Update failed: Ticket ID is missing.";
     return;
   }
+
+  const fieldsToUpdateForSupabase = camelCaseToSupabase(camelCaseFieldsToUpdate);
+
   loading.value = true;
   errorMsg.value = '';
   try {
     const { data, error } = await supabase
       .from('tickets')
-      .update({ ...fieldsToUpdate, updated_at: new Date().toISOString() })
+      .update({ ...fieldsToUpdateForSupabase, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select();
+
     if (error) {
       console.error('Update error:', error.message);
       errorMsg.value = `Failed to update ticket: ${error.message}`;
-      await fetchTickets(); // Re-fetch to ensure UI consistency on error
+      await fetchTickets(); 
     } else if (data && data.length > 0) {
+      const updatedFromSupabase = supabaseToCamelCase(data[0]);
       const index = tickets.value.findIndex(t => t.id === id);
-      if (index !== -1) tickets.value[index] = { ...tickets.value[index], ...data[0] };
+      if (index !== -1) tickets.value[index] = { ...tickets.value[index], ...updatedFromSupabase };
       else await fetchTickets();
     } else {
       await fetchTickets();
@@ -103,13 +142,15 @@ async function updateTicketStatus(ticketId, newStatus) {
       .update({ status: newStatus, updated_at: new Date().toISOString() })
       .eq('id', ticketId)
       .select();
+
     if (error) {
       console.error('Status update error:', error.message);
       errorMsg.value = `Failed to update status: ${error.message}`;
-      await fetchTickets(); // Re-fetch for consistency
+      await fetchTickets();
     } else if (data && data.length > 0) {
+      const updatedFromSupabase = supabaseToCamelCase(data[0]);
       const index = tickets.value.findIndex(t => t.id === ticketId);
-      if (index !== -1) tickets.value[index] = { ...tickets.value[index], ...data[0] };
+      if (index !== -1) tickets.value[index] = { ...tickets.value[index], ...updatedFromSupabase };
       else await fetchTickets();
     } else {
       await fetchTickets();
@@ -130,20 +171,18 @@ async function handleAddTicket(newTicketDetails) {
   loading.value = true;
   errorMsg.value = '';
   try {
-    const ticketToInsert = {
-      ...newTicketDetails,
-      is_subtask: newTicketDetails.is_subtask || false,
-      parent_id: newTicketDetails.parent_id || null,
-    };
+    const ticketToInsertForSupabase = camelCaseToSupabase(newTicketDetails);
+    
     const { data, error } = await supabase
       .from('tickets')
-      .insert([ticketToInsert])
+      .insert([ticketToInsertForSupabase])
       .select();
+
     if (error) {
       console.error('Add error:', error.message);
       errorMsg.value = `Failed to add ticket: ${error.message}`;
     } else if (data && data.length > 0) {
-      tickets.value.push(data[0]);
+      tickets.value.push(supabaseToCamelCase(data[0]));
     }
   } catch (err) {
     console.error('Add exception:', err.message);
