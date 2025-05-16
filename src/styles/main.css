@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .ticket-card {
+    @apply bg-white rounded-lg shadow-md p-4 mb-3 cursor-pointer border-l-4;
+  }
+  
+  .ticket-card.todo {
+    @apply border-todo;
+  }
+  
+  .ticket-card.inProgress {
+    @apply border-inProgress;
+  }
+  
+  .ticket-card.done {
+    @apply border-done;
+  }
+  
+  .ticket-card.terminology {
+    @apply bg-terminology/10;
+  }
+  
+  .ticket-card.supply-partners {
+    @apply bg-supply-partners/10;
+  }
+  
+  .ticket-card.supply-packages {
+    @apply bg-supply-packages/10;
+  }
+  
+  .ticket-column {
+    @apply bg-gray-50 rounded-lg p-4 min-h-[500px] w-full;
+  }
+  
+  .badge {
+    @apply text-xs px-2 py-1 rounded-full font-medium;
+  }
+} 
