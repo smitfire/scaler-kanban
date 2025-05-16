@@ -270,28 +270,30 @@ async function handleDeleteTicket(ticketId) {
 
 <template>
   <div class="container mx-auto px-4 py-8 relative min-h-screen">
-    <header class="mb-8">
+    <header class="mb-6">
       <div class="flex justify-between items-center mb-4">
         <h1 class="text-3xl font-bold text-gray-800">Nick kanban board</h1>
-        <div class="flex items-center space-x-4">
-          <div class="flex items-center space-x-2">
+        <div class="flex items-center space-x-2">
             <label for="category-filter" class="text-sm font-medium text-gray-700">Filter by:</label>
-            <select id="category-filter" v-model="filterCategory" class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            <select id="category-filter" v-model="filterCategory" class="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
               <option v-for="category_item in categories" :key="category_item.id" :value="category_item.id">{{ category_item.label }}</option>
             </select>
-          </div>
-          <button 
-            @click="showTaskDumpModal = true"
-            title="Task Creation Dump"
-            class="p-2 text-gray-600 hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-full"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-          </button>
         </div>
       </div>
-      <!-- Removed description paragraph -->
+      
+      <!-- Prominent Task Creation Dump Button -->
+      <div class="mt-6 mb-6 text-left"> <!-- Changed to text-left, or use text-center for centered button -->
+        <button 
+          @click="showTaskDumpModal = true"
+          title="Paste text to automatically create multiple tasks using AI."
+          class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-transform transform hover:scale-105"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mr-3">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          AI Task Creation Dump
+        </button>
+      </div>
     </header>
     
     <!-- Task Creation Dump Modal -->
