@@ -8,7 +8,7 @@ const tickets = ref([]);
 const loading = ref(true);
 const errorMsg = ref(''); // For Supabase errors
 const filterCategory = ref('all');
-const showTaskDump = ref(false); // For toggling the new component
+const showTaskDumpModal = ref(false); // Renamed for clarity: controls modal visibility
 
 // Categories for filtering
 const categories = [
@@ -226,11 +226,16 @@ async function handleAddMultipleTickets(ticketsToAdd) { // Expects an array of c
   if (failedAdds.length > 0) {
     errorMsg.value = `Successfully added ${successfulAdds} tickets. Failed to add ${failedAdds.length} tickets. Check console for details.`;
   } else if (successfulAdds > 0) {
-    // Optionally, set a success message for the dump component to show
+    // This message will be displayed in App.vue, TaskCreationDump has its own success message.
+    // You might want to clear this or use a different ref if TaskCreationDump handles all success UX for this flow.
+    // For now, clearing it to avoid duplicate success messages.
+    // errorMsg.value = `Successfully added ${successfulAdds} tickets.`; 
   }
   // No explicit fetchTickets() here, as tickets are pushed individually.
   // Consider re-fetching if strict order or full consistency after batch is paramount.
   loading.value = false;
+  // After batch add, close the modal
+  showTaskDumpModal.value = false; 
 }
 
 // Placeholder for deleting a ticket
@@ -264,35 +269,47 @@ async function handleDeleteTicket(ticketId) {
 </script>
 
 <template>
-  <div class="container mx-auto px-4 py-8">
+  <div class="container mx-auto px-4 py-8 relative min-h-screen">
     <header class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-800 mb-4">Bold Collective Kanban Board</h1>
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-        <p class="text-gray-600">
-          Track development tasks for the Bold Exchange Portal
-        </p>
-        <button 
-          @click="showTaskDump = !showTaskDump"
-          class="mb-4 px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-        >
-          {{ showTaskDump ? 'Hide' : 'Show' }} Task Creation Dump
-        </button>
-        <div class="flex items-center space-x-2">
-          <label for="category-filter" class="text-sm font-medium text-gray-700">Filter by:</label>
-          <select 
-            id="category-filter" 
-            v-model="filterCategory"
-            class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+      <div class="flex justify-between items-center mb-4">
+        <h1 class="text-3xl font-bold text-gray-800">Nick kanban board</h1>
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center space-x-2">
+            <label for="category-filter" class="text-sm font-medium text-gray-700">Filter by:</label>
+            <select id="category-filter" v-model="filterCategory" class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+              <option v-for="category_item in categories" :key="category_item.id" :value="category_item.id">{{ category_item.label }}</option>
+            </select>
+          </div>
+          <button 
+            @click="showTaskDumpModal = true"
+            title="Task Creation Dump"
+            class="p-2 text-gray-600 hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-full"
           >
-            <option v-for="category in categories" :key="category.id" :value="category.id">
-              {{ category.label }}
-            </option>
-          </select>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+          </button>
         </div>
       </div>
+      <!-- Removed description paragraph -->
     </header>
     
-    <TaskCreationDump v-if="showTaskDump" :onAddMultipleTickets="handleAddMultipleTickets" />
+    <!-- Task Creation Dump Modal -->
+    <div v-if="showTaskDumpModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 transition-opacity flex items-center justify-center z-50 p-4">
+      <div class="relative bg-white rounded-lg shadow-xl transform transition-all sm:max-w-2xl sm:w-full">
+        <div class="absolute top-0 right-0 pt-4 pr-4">
+          <button @click="showTaskDumpModal = false" type="button" class="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <span class="sr-only">Close</span>
+            <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="p-6">
+          <TaskCreationDump :onAddMultipleTickets="handleAddMultipleTickets" @close-modal="showTaskDumpModal = false" />
+        </div>
+      </div>
+    </div>
 
     <main>
       <div v-if="loading && !tickets.length" class="flex justify-center items-center h-64">

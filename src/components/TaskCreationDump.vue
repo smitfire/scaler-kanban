@@ -1,27 +1,37 @@
 <template>
-  <div class="my-6 p-4 border border-gray-300 rounded-lg shadow">
-    <h2 class="text-xl font-semibold mb-3 text-gray-700">Task Creation Dump</h2>
-    <p class="text-sm text-gray-600 mb-3">
+  <div>
+    <h2 class="text-2xl font-bold mb-4 text-gray-800">Task Creation Dump</h2>
+    <p class="text-sm text-gray-600 mb-4">
       Paste a block of text describing tasks, and the AI will attempt to create tickets.
     </p>
     <textarea
       v-model="rawText"
       rows="10"
-      class="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+      class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
       placeholder="Paste your task descriptions here..."
     ></textarea>
-    <button
-      @click="generateTickets"
-      :disabled="isLoading || !rawText.trim()"
-      class="mt-3 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
-    >
-      <span v-if="isLoading">Processing...</span>
-      <span v-else>Generate Tickets</span>
-    </button>
-    <div v-if="errorMsg" class="mt-3 p-3 bg-red-100 text-red-700 border border-red-300 rounded-md">
+    <div class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+      <button
+        type="button"
+        @click="generateTickets"
+        :disabled="isLoading || !rawText.trim()"
+        class="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:col-start-2 sm:text-sm disabled:opacity-50"
+      >
+        <span v-if="isLoading">Processing...</span>
+        <span v-else>Generate Tickets</span>
+      </button>
+      <button 
+        type="button"
+        @click="emits('close-modal')" 
+        class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:col-start-1 sm:text-sm"
+      >
+        Cancel
+      </button>
+    </div>
+    <div v-if="errorMsg" class="mt-4 p-3 bg-red-100 text-red-700 border border-red-300 rounded-md text-sm">
       <strong>Error:</strong> {{ errorMsg }}
     </div>
-    <div v-if="successMsg" class="mt-3 p-3 bg-green-100 text-green-700 border border-green-300 rounded-md">
+    <div v-if="successMsg" class="mt-4 p-3 bg-green-100 text-green-700 border border-green-300 rounded-md text-sm">
       {{ successMsg }}
     </div>
   </div>
@@ -31,12 +41,13 @@
 import { ref } from 'vue';
 
 const props = defineProps({
-  // This function will be passed from App.vue to add multiple tickets
   onAddMultipleTickets: {
     type: Function,
     required: true,
   },
 });
+
+const emits = defineEmits(['close-modal']);
 
 const rawText = ref('');
 const isLoading = ref(false);
@@ -82,11 +93,11 @@ async function generateTickets() {
     }
 
     if (result.tickets && result.tickets.length > 0) {
-      await props.onAddMultipleTickets(result.tickets); // Call the batch add function
-      successMsg.value = `${result.tickets.length} ticket(s) generated and submitted successfully!`;
-      rawText.value = ''; // Clear input after success
+      await props.onAddMultipleTickets(result.tickets);
+      successMsg.value = `${result.tickets.length} ticket(s) submitted successfully! Check the board.`;
+      rawText.value = '';
     } else {
-      errorMsg.value = 'AI did not return any tickets. Try rephrasing your text or check the format.';
+      errorMsg.value = 'AI did not return any tickets. Try rephrasing your text.';
     }
 
   } catch (err) {
